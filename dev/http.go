@@ -1,6 +1,7 @@
 package dev
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	// "io"
@@ -37,6 +38,12 @@ func (h *HTTPServer) Setup() {
 			Timeout:   5 * time.Second,
 			KeepAlive: 10 * time.Second,
 		}).Dial,
+    DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+      parts := strings.Split(address, ":")
+      socketPath := parts[0]
+      fmt.Fprintf(os.Stderr, "Dialing address %s\n", socketPath)
+      return net.Dial("unix", socketPath);
+    },
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
@@ -179,7 +186,14 @@ func (h *HTTPServer) proxyReq(req *http.Request) {
 	// 	}
 	// }
 
-	req.URL.Scheme, req.URL.Host = app.Scheme, app.Address()
+  fmt.Println("app scheme: %s", app.Scheme)
+  fmt.Println("app address: %s", app.Address())
+  if app.Scheme == "httpu" {
+    req.URL.Scheme = "http"
+    req.URL.Host = app.Host // actually the socket path, no port included
+  } else {
+    req.URL.Scheme, req.URL.Host = app.Scheme, app.Address()
+  }
 	// return err
 }
 
