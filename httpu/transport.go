@@ -857,6 +857,7 @@ func (pc *persistConn) cancelRequest() {
 	pc.lk.Lock()
 	defer pc.lk.Unlock()
 	pc.canceled = true
+  fmt.Println("canceling request from cancelRequest")
 	pc.closeLocked(errRequestCanceled)
 }
 
@@ -971,6 +972,7 @@ func (pc *persistConn) readLoop() {
 			if isEOF {
 				<-eofc // see comment above eofc declaration
 			} else if err != nil && pc.isCanceled() {
+        fmt.Println("canceling request from readLoop")
 				return errRequestCanceled
 			}
 			return err
@@ -1207,6 +1209,7 @@ func (pc *persistConn) roundTrip(req *transportRequest) (resp *http.Response, er
 	testHookEnterRoundTrip()
 	if !pc.t.replaceReqCanceler(req.Request, pc.cancelRequest) {
 		pc.t.putOrCloseIdleConn(pc)
+    fmt.Println("canceling request from roundTrip 1")
 		return nil, errRequestCanceled
 	}
 	pc.lk.Lock()
@@ -1280,6 +1283,7 @@ WaitResponse:
 		case err := <-writeErrCh:
 			if err != nil {
 				if pc.isCanceled() {
+          fmt.Println("canceling request from roundTrip WaitResponse 1")
 					err = errRequestCanceled
 				}
 				re = responseAndError{err: beforeRespHeaderError{err}}
@@ -1294,6 +1298,7 @@ WaitResponse:
 		case <-pc.closech:
 			var err error
 			if pc.isCanceled() {
+        fmt.Println("canceling request from roundTrip WaitResponse 2")
 				err = errRequestCanceled
 			} else {
 				err = beforeRespHeaderError{fmt.Errorf("net/http: HTTP/1 transport connection broken: %v", pc.closed)}
@@ -1306,6 +1311,7 @@ WaitResponse:
 			break WaitResponse
 		case re = <-resc:
 			if re.err != nil && pc.isCanceled() {
+        fmt.Println("canceling request from roundTrip WaitResponse 3")
 				re.err = errRequestCanceled
 			}
 			break WaitResponse
