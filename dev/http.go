@@ -41,7 +41,7 @@ func (h *HTTPServer) Setup() {
     DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
       parts := strings.Split(address, ":")
       socketPath := parts[0]
-      fmt.Fprintf(os.Stderr, "Dialing address %s\n", socketPath)
+      // fmt.Fprintf(os.Stderr, "Dialing address %s\n", socketPath)
       return net.Dial("unix", socketPath);
     },
 		TLSHandshakeTimeout:   10 * time.Second,
@@ -186,8 +186,8 @@ func (h *HTTPServer) proxyReq(req *http.Request) {
 	// 	}
 	// }
 
-  fmt.Println("app scheme: %s", app.Scheme)
-  fmt.Println("app address: %s", app.Address())
+  // fmt.Println("app scheme: %s", app.Scheme)
+  // fmt.Println("app address: %s", app.Address())
   if app.Scheme == "httpu" {
     req.URL.Scheme = "http"
     req.URL.Host = app.Host // actually the socket path, no port included
