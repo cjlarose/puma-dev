@@ -3,19 +3,18 @@ package dev
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	// "io"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"path"
-	"path/filepath"
+	// "path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/bmizerany/pat"
-	"github.com/puma/puma-dev/httpu"
-	"github.com/puma/puma-dev/httputil"
 )
 
 type HTTPServer struct {
@@ -28,12 +27,12 @@ type HTTPServer struct {
 	Domains            []string
 
 	mux       *pat.PatternServeMux
-	transport *httpu.Transport
+	transport *http.Transport
 	proxy     *httputil.ReverseProxy
 }
 
 func (h *HTTPServer) Setup() {
-	h.transport = &httpu.Transport{
+	h.transport = &http.Transport{
 		Dial: (&net.Dialer{
 			Timeout:   5 * time.Second,
 			KeepAlive: 10 * time.Second,
@@ -45,10 +44,10 @@ func (h *HTTPServer) Setup() {
 	h.Pool.AppClosed = h.AppClosed
 
 	h.proxy = &httputil.ReverseProxy{
-		Proxy:         h.proxyReq,
+		Director:      h.proxyReq,
 		Transport:     h.transport,
 		FlushInterval: 1 * time.Second,
-		Debug:         h.Debug,
+		// Debug:         h.Debug,
 	}
 
 	h.mux = pat.New()
@@ -153,7 +152,7 @@ func (h *HTTPServer) removeTLD(host string) string {
 	}
 }
 
-func (h *HTTPServer) proxyReq(w http.ResponseWriter, req *http.Request) error {
+func (h *HTTPServer) proxyReq(req *http.Request) {
 	name := h.removeTLD(req.Host)
 
 	app, err := h.findApp(name)
@@ -164,24 +163,24 @@ func (h *HTTPServer) proxyReq(w http.ResponseWriter, req *http.Request) error {
 			h.Events.Add("lookup_error", "error", err.Error())
 		}
 
-		return err
+		//return err
 	}
 
-	if h.shouldServePublicPathForApp(app, req) {
-		safeURLPath := path.Clean(req.URL.Path)
-		path := filepath.Join(app.dir, "public", safeURLPath)
+	// if h.shouldServePublicPathForApp(app, req) {
+	// 	safeURLPath := path.Clean(req.URL.Path)
+	// 	path := filepath.Join(app.dir, "public", safeURLPath)
 
-		fi, err := os.Stat(path)
-		if err == nil && !fi.IsDir() {
-			if ofile, err := os.Open(path); err == nil {
-				http.ServeContent(w, req, req.URL.Path, fi.ModTime(), io.ReadSeeker(ofile))
-				return httputil.ErrHandled
-			}
-		}
-	}
+	// 	fi, err := os.Stat(path)
+	// 	if err == nil && !fi.IsDir() {
+	// 		if ofile, err := os.Open(path); err == nil {
+	// 			http.ServeContent(w, req, req.URL.Path, fi.ModTime(), io.ReadSeeker(ofile))
+	// 			return httputil.ErrHandled
+	// 		}
+	// 	}
+	// }
 
 	req.URL.Scheme, req.URL.Host = app.Scheme, app.Address()
-	return err
+	// return err
 }
 
 func (h *HTTPServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
